@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zero Shot · Multi-Agent Data Intelligence System</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0e17;
+    --bg-soft:#0f1521;
+    --panel:#131b2b;
+    --panel-2:#172133;
+    --line:#243048;
+    --ink:#e8edf6;
+    --muted:#94a3b8;
+    --dim:#64748b;
+    --accent:#6ee7ff;
+    --accent-2:#a78bfa;
+    --accent-3:#34d399;
+    --warn:#fbbf24;
+    --grad:linear-gradient(135deg,#6ee7ff 0%,#a78bfa 50%,#f472b6 100%);
+    --radius:18px;
+    --shadow:0 20px 60px -20px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(167,139,250,.12), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(110,231,255,.10), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ===== Cover / Hero ===== */
+  .cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px 0 40px;position:relative}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+    border:1px solid var(--line);background:var(--panel);padding:7px 14px;border-radius:999px;width:max-content}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent-3);box-shadow:0 0 12px var(--accent-3)}
+  h1.title{font-size:clamp(34px,6vw,68px);line-height:1.04;margin:22px 0 10px;font-weight:800;letter-spacing:-.02em}
+  h1.title .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tagline{font-size:clamp(16px,2.2vw,21px);color:var(--muted);max-width:760px}
+  .summary{margin-top:22px;max-width:780px;font-size:16.5px;color:#cdd6e6}
+  .summary b{color:var(--ink)}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .chip{font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:6px 12px;border-radius:10px}
+  .chip b{color:var(--accent)}
+
+  .diagram-card{margin-top:38px;background:linear-gradient(180deg,var(--panel),var(--bg-soft));
+    border:1px solid var(--line);border-radius:var(--radius);padding:22px 22px 12px;box-shadow:var(--shadow)}
+  .diagram-card .lbl{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:12.5px;
+    letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+  .mermaid{display:flex;justify-content:center;overflow-x:auto}
+  .scroll-hint{text-align:center;color:var(--dim);font-size:13px;margin-top:34px;animation:bob 2.2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0);opacity:.6}50%{transform:translateY(6px);opacity:1}}
+
+  /* ===== Chapters intro ===== */
+  .section-head{padding:70px 0 10px}
+  .kicker{color:var(--accent-2);font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}
+  h2.sh{font-size:clamp(26px,4vw,40px);margin:8px 0 6px;font-weight:800;letter-spacing:-.01em}
+  .sh-sub{color:var(--muted);max-width:680px}
+
+  .chapters{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;padding:30px 0 90px}
+  .chapter{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;cursor:pointer;
+    transition:transform .18s ease,border-color .18s ease,background .18s ease;overflow:hidden}
+  .chapter:hover{transform:translateY(-4px);border-color:var(--accent);background:var(--panel-2)}
+  .chapter::after{content:"";position:absolute;inset:0;background:var(--grad);opacity:0;transition:opacity .18s ease;
+    mix-blend-mode:overlay;pointer-events:none}
+  .chapter:hover::after{opacity:.10}
+  .ch-num{font-size:12px;letter-spacing:.2em;color:var(--dim);font-weight:700}
+  .ch-icon{font-size:26px;margin-bottom:6px}
+  .ch-title{font-size:19px;font-weight:700;margin:4px 0 6px}
+  .ch-desc{color:var(--muted);font-size:14px}
+  .ch-open{margin-top:14px;color:var(--accent);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+
+  /* ===== Reader overlay (the "book page") ===== */
+  .reader{position:fixed;inset:0;background:rgba(5,8,14,.72);backdrop-filter:blur(8px);z-index:60;
+    display:none;opacity:0;transition:opacity .22s ease;overflow-y:auto}
+  .reader.open{display:block;opacity:1}
+  .page{max-width:880px;margin:48px auto;background:linear-gradient(180deg,var(--panel),var(--bg-soft));
+    border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);transform:translateY(14px);transition:transform .25s ease}
+  .reader.open .page{transform:translateY(0)}
+  .page-head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:16px;
+    padding:18px 28px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(19,27,43,.98),rgba(19,27,43,.92));backdrop-filter:blur(6px);border-radius:20px 20px 0 0;z-index:2}
+  .page-head .pk{color:var(--accent-2);font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+  .page-head h3{margin:2px 0 0;font-size:22px;font-weight:800}
+  .x{border:1px solid var(--line);background:var(--panel-2);color:var(--ink);width:38px;height:38px;border-radius:10px;
+    font-size:18px;cursor:pointer;flex:0 0 auto;transition:background .15s,border-color .15s}
+  .x:hover{background:#1e293b;border-color:var(--accent)}
+  .page-body{padding:26px 30px 12px}
+  .page-body h4{font-size:16px;margin:26px 0 10px;color:var(--accent);letter-spacing:.02em;
+    display:flex;align-items:center;gap:9px}
+  .page-body h4 .b{width:6px;height:18px;border-radius:3px;background:var(--grad)}
+  .page-body p{color:#d3dbe9}
+  .page-body ul{margin:8px 0;padding-left:0;list-style:none}
+  .page-body li{position:relative;padding:7px 0 7px 26px;color:#cbd5e6;border-bottom:1px dashed rgba(255,255,255,.04)}
+  .page-body li:before{content:"▹";position:absolute;left:4px;top:7px;color:var(--accent)}
+  .page-body li b{color:var(--ink)}
+  code{background:#0b1220;border:1px solid var(--line);border-radius:6px;padding:1.5px 6px;font-size:13px;color:#a5f3fc;
+    font-family:"SF Mono",Consolas,Menlo,monospace}
+  .note{background:rgba(110,231,255,.06);border:1px solid rgba(110,231,255,.25);border-left:3px solid var(--accent);
+    padding:12px 16px;border-radius:10px;margin:16px 0;color:#cfe9f3;font-size:14.5px}
+  .note.purple{background:rgba(167,139,250,.07);border-color:rgba(167,139,250,.3);border-left-color:var(--accent-2);color:#e0d8f6}
+  .note.amber{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.28);border-left-color:var(--warn);color:#f4e6c4}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .tile{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .tile .t{font-weight:700;font-size:14.5px;margin-bottom:4px}
+  .tile .d{color:var(--muted);font-size:13px}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.06em;padding:3px 9px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  .tag.v1{background:rgba(52,211,153,.15);color:#6ee7b7;border:1px solid rgba(52,211,153,.35)}
+  .tag.v2{background:rgba(251,191,36,.13);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}
+
+  .timeline{position:relative;margin:14px 0 6px;padding-left:26px}
+  .timeline:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--accent),var(--accent-2))}
+  .tl{position:relative;padding:10px 0 14px}
+  .tl:before{content:"";position:absolute;left:-23px;top:14px;width:12px;height:12px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--accent)}
+  .tl .day{font-weight:800;color:var(--ink)}
+  .tl .day span{color:var(--dim);font-weight:600;font-size:13px;margin-left:8px}
+
+  .page-nav{display:flex;justify-content:space-between;gap:10px;padding:18px 30px 30px}
+  .nav-btn{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:14px 16px;
+    cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+  .nav-btn:hover:not(:disabled){border-color:var(--accent);background:#1b2640}
+  .nav-btn:disabled{opacity:.35;cursor:default}
+  .nav-btn .lab{display:block;font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+  .nav-btn .nm{font-weight:700;font-size:14.5px}
+  .nav-btn.next{text-align:right}
+
+  .mermaid-box{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:18px 14px;margin:14px 0;overflow-x:auto}
+
+  footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--dim);font-size:13.5px;text-align:center}
+  footer b{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ===================== COVER ===================== -->
+<header class="cover">
+  <div class="wrap">
+    <span class="badge"><span class="dot"></span> Team Zero Shot · Capstone Showcase</span>
+    <h1 class="title">A database that <span class="g">explains itself</span><br/>and answers in plain English.</h1>
+    <p class="tagline">A multi-agent system that profiles any dataset on its own, builds a living semantic layer, and turns natural-language questions into validated, self-correcting SQL — with streamed, human-readable answers.</p>
+
+    <p class="summary">
+      Point it at a raw table and three cooperating AI agents take over. The <b>Profiler</b> studies every column and writes a natural-language description of what the data <i>means</i>. The <b>Query Agent</b> reads those descriptions, writes SQL, dry-runs it, and fixes its own mistakes before touching the database. The <b>Explanation Agent</b> streams the answer back like a colleague talking you through it. No hand-written schema docs. No SQL knowledge required.
+    </p>
+
+    <div class="meta-row">
+      <span class="chip"><b>3</b> cooperating agents</span>
+      <span class="chip"><b>Pydantic AI</b> + Claude</span>
+      <span class="chip"><b>DuckDB</b> · LanceDB · FastAPI</span>
+      <span class="chip"><b>Spec-driven</b> (OpenSpec)</span>
+      <span class="chip">Ships <b>v1 in 3 days</b></span>
+    </div>
+
+    <div class="diagram-card">
+      <div class="lbl"><span>The big picture · system architecture</span><span>scroll to read the story ↓</span></div>
+      <div class="mermaid">
+flowchart LR
+    User([User / Trainer]):::user -->|natural-language question| API[FastAPI&nbsp;·&nbsp;/ask&nbsp;SSE]:::api
+    API --> QA
+
+    subgraph Brain[" The three agents "]
+      direction TB
+      PA[Profiler Agent]:::ag
+      QA[Query Agent]:::ag
+      EA[Explanation Agent]:::ag
+    end
+
+    DB[(DuckDB<br/>your data)]:::store -->|column stats| PA
+    PA -->|NL profiles + embeddings| VS[(LanceDB<br/>semantic layer)]:::store
+    QA -->|retrieve top-k profiles| VS
+    QA -->|validated SELECT-only SQL| DB
+    QA -->|results| EA
+    EA -->|streamed answer| API
+    API -->|SSE tokens + metrics| User
+
+    classDef user fill:#1e293b,stroke:#6ee7ff,color:#e8edf6;
+    classDef api fill:#172133,stroke:#a78bfa,color:#e8edf6;
+    classDef ag fill:#11203a,stroke:#34d399,color:#e8edf6;
+    classDef store fill:#0b1220,stroke:#475569,color:#cbd5e6;
+    style Brain fill:#0d1525,stroke:#243048,color:#94a3b8;
+      </div>
+    </div>
+
+    <div class="scroll-hint">▼ &nbsp;Keep scrolling — or jump into any chapter below</div>
+  </div>
+</header>
+
+<!-- ===================== CHAPTERS ===================== -->
+<main class="wrap">
+  <div class="section-head">
+    <div class="kicker">The story, chapter by chapter</div>
+    <h2 class="sh">Click any chapter to go deeper</h2>
+    <p class="sh-sub">The cover gives you the whole picture in one diagram. Each chapter below opens a full page with the detail behind it — how it works, how we build it, and how we prove it works.</p>
+  </div>
+
+  <section class="chapters" id="chapters"><!-- cards injected by JS --></section>
+</main>
+
+<!-- ===================== READER OVERLAY ===================== -->
+<div class="reader" id="reader" role="dialog" aria-modal="true">
+  <article class="page">
+    <div class="page-head">
+      <div>
+        <div class="pk" id="rPk">Chapter</div>
+        <h3 id="rTitle">Title</h3>
+      </div>
+      <button class="x" id="rClose" aria-label="Close">✕</button>
+    </div>
+    <div class="page-body" id="rBody"></div>
+    <div class="page-nav">
+      <button class="nav-btn prev" id="rPrev"><span class="lab">◀ Previous</span><span class="nm" id="rPrevNm"></span></button>
+      <button class="nav-btn next" id="rNext"><span class="lab">Next ▶</span><span class="nm" id="rNextNm"></span></button>
+    </div>
+  </article>
+</div>
+
+<footer>
+  <div class="wrap">
+    Built by <b>Team Zero Shot</b> · GAI-2109 Practical Development of Agentic AI Applications &amp; AIC-2101 Spec-Driven Development.<br/>
+    Self-contained page — share the file, open in any browser, no server needed.
+  </div>
+</footer>
+
+<script>
+/* ---------- Mermaid ---------- */
+mermaid.initialize({
+  startOnLoad:true,
+  theme:"dark",
+  themeVariables:{
+    fontFamily:"-apple-system,Segoe UI,Roboto,sans-serif",
+    primaryColor:"#11203a", primaryTextColor:"#e8edf6", primaryBorderColor:"#34d399",
+    lineColor:"#64748b", secondaryColor:"#172133", tertiaryColor:"#0b1220"
+  },
+  flowchart:{curve:"basis"}
+});
+
+/* ---------- Chapter content ---------- */
+const CH = [
+  {
+    icon:"🎯", title:"The Problem & The Vision",
+    desc:"Why a database that documents and queries itself matters.",
+    body:`
+      <h4><span class="b"></span>The pain we're attacking</h4>
+      <p>Every analytics team hits the same wall: the data exists, but <b>nobody can use it without an expert in the room</b>. Schemas are cryptic, documentation is stale or missing, and getting a simple answer means writing SQL against tables you don't fully understand.</p>
+      <ul>
+        <li><b>Semantic gap</b> — column names like <code>tpep_pickup_datetime</code> mean nothing to a business user.</li>
+        <li><b>Stale docs</b> — hand-written data dictionaries rot the moment the data changes.</li>
+        <li><b>SQL bottleneck</b> — every question routes through a small group of people who can write queries.</li>
+      </ul>
+
+      <h4><span class="b"></span>Our vision</h4>
+      <p>A system that <b>builds and maintains its own semantic layer</b>, then lets anyone ask questions in plain English and get a trustworthy, explained answer.</p>
+      <div class="note">The "semantic layer" isn't written by hand — it's <b>generated by an agent</b> that inspects real statistics from the data, then re-generated whenever the data changes. The documentation can never go stale because the system owns it.</div>
+
+      <h4><span class="b"></span>Goals &amp; non-goals (v1)</h4>
+      <div class="grid2">
+        <div class="tile"><div class="t">In scope ✓</div><div class="d">Single-table querying, self-built profiles, validated self-correcting SQL, streamed answers, honest accuracy metrics.</div></div>
+        <div class="tile"><div class="t">Deliberately out (v1) ✕</div><div class="d">Multi-table joins, a web UI, conversational memory, auth — all scheduled for v2 so v1 actually ships.</div></div>
+      </div>
+    `
+  },
+  {
+    icon:"🧠", title:"The Three Agents",
+    desc:"Profiler, Query, Explanation — what each one owns.",
+    body:`
+      <p>The whole system is three specialised agents, each with a single job and a strict typed contract. They never share mutable state — they pass <b>structured Pydantic outputs</b> to each other.</p>
+
+      <h4><span class="b"></span>1 · The Profiler Agent</h4>
+      <ul>
+        <li>Reads <b>deterministic statistics</b> per column (null rate, distinct count, min/max/mean/std, top-10 values, sample rows, date ranges) — computed in plain SQL, <b>not</b> guessed by the LLM.</li>
+        <li>Turns those numbers into a <b>natural-language description</b> of what each column and table represents.</li>
+        <li>Embeds each profile (MiniLM) and stores it in <b>LanceDB</b> — this is the searchable semantic layer.</li>
+      </ul>
+
+      <h4><span class="b"></span>2 · The Query Agent</h4>
+      <ul>
+        <li>Embeds the user's question, <b>retrieves the top-k most relevant profiles</b> from LanceDB.</li>
+        <li>Generates a <code>SQLQuery</code> structured output, then <b>dry-runs it with EXPLAIN</b> before ever executing.</li>
+        <li><b>Self-corrects</b>: if EXPLAIN or a validator fails, Pydantic AI re-prompts it automatically (<code>Agent(retries=3)</code>).</li>
+        <li>If the question is ambiguous, it returns a <code>ClarificationNeeded</code> instead of guessing.</li>
+      </ul>
+
+      <h4><span class="b"></span>3 · The Explanation Agent</h4>
+      <ul>
+        <li>Takes the result set and <b>streams</b> a plain-English answer back token-by-token over SSE.</li>
+        <li>Slightly higher temperature for a natural, readable tone.</li>
+      </ul>
+
+      <div class="note purple"><b>Why split them?</b> Separation keeps each agent's prompt small and testable, lets us use a <b>cheap model for some jobs and a capable one for SQL</b>, and means any one agent can be mocked in tests without standing up the others.</div>
+    `
+  },
+  {
+    icon:"⚙️", title:"How It Actually Works",
+    desc:"The two core flows — profiling (offline) and querying (online).",
+    body:`
+      <h4><span class="b"></span>Flow A · Profiling (runs once, or whenever data changes)</h4>
+      <div class="mermaid-box"><div class="mermaid">
+flowchart TD
+    A[Load dataset into DuckDB] --> B[Compute deterministic stats per column<br/>nulls · distinct · min/max/mean/std · top-10 · samples]
+    B --> C[Profiler Agent writes NL description<br/>fast model]
+    C --> D[Embed profile · MiniLM]
+    D --> E[(Store in LanceDB<br/>semantic layer)]
+    classDef n fill:#11203a,stroke:#34d399,color:#e8edf6;
+    class A,B,C,D,E n;
+      </div></div>
+
+      <h4><span class="b"></span>Flow B · Querying (every question)</h4>
+      <div class="mermaid-box"><div class="mermaid">
+flowchart TD
+    Q[NL question] --> E[Embed question]
+    E --> R[Retrieve top-k profiles · LanceDB]
+    R --> AM{Ambiguous?}
+    AM -->|yes| CL[Return ClarificationNeeded<br/>→ ask the user]
+    AM -->|no| G[Query Agent generates SQL · capable model]
+    G --> X[EXPLAIN dry-run + SELECT-only guard]
+    X -->|invalid| G
+    X -->|valid| EX[Execute · LIMIT 10k · 30s timeout]
+    EX --> V[Validators: shape check + LLM-as-judge]
+    V -->|fail| G
+    V -->|pass| EXP[Explanation Agent streams answer]
+    classDef n fill:#11203a,stroke:#34d399,color:#e8edf6;
+    classDef d fill:#172133,stroke:#a78bfa,color:#e8edf6;
+    class Q,E,R,G,EX,EXP n;
+    class AM,X,V d;
+      </div></div>
+
+      <h4><span class="b"></span>The /ask request, end to end</h4>
+      <div class="mermaid-box"><div class="mermaid">
+sequenceDiagram
+    actor U as User
+    participant API as FastAPI
+    participant Q as Query Agent
+    participant DB as DuckDB
+    participant Ex as Explanation Agent
+    U->>API: POST /ask (question)
+    API-->>U: SSE · status
+    API->>Q: run(question)
+    Q->>DB: EXPLAIN (dry-run)
+    DB-->>Q: ok
+    Q->>DB: execute SELECT
+    DB-->>Q: rows
+    API-->>U: SSE · sql + result
+    Q->>Ex: hand off rows
+    Ex-->>API: token stream
+    API-->>U: SSE · tokens
+    API-->>U: SSE · metrics (cost, latency)
+      </div></div>
+    `
+  },
+  {
+    icon:"🛡️", title:"Trust & Safety by Design",
+    desc:"How we stop the agent doing something dumb or dangerous.",
+    body:`
+      <p>An LLM writing SQL against a database is exactly where things go wrong. We assume the model <b>will</b> hallucinate and build guardrails so it can't cause harm.</p>
+
+      <h4><span class="b"></span>The SQL safety stack</h4>
+      <ul>
+        <li><b>SELECT-only enforcement</b> — the generated SQL is parsed and rejected if it's anything but a read.</li>
+        <li><b>EXPLAIN dry-run</b> — every query is validated by the engine <i>before</i> execution; failures trigger an automatic retry.</li>
+        <li><b>Row limit + timeout</b> — hard <code>LIMIT 10000</code> and a 30-second cap so nothing runs away.</li>
+        <li><b>Read-only connection path</b> — the execution path physically can't mutate data.</li>
+      </ul>
+
+      <h4><span class="b"></span>Two validators on every answer</h4>
+      <div class="grid2">
+        <div class="tile"><div class="t">Shape check</div><div class="d">Cheap keyword heuristic — does the result even have the right kind of columns for the question?</div></div>
+        <div class="tile"><div class="t">LLM-as-judge</div><div class="d">A fast model gives a structured verdict (temp 0): does this result actually answer the question? Fail → corrective retry.</div></div>
+      </div>
+
+      <h4><span class="b"></span>Secrets, input &amp; PII</h4>
+      <ul>
+        <li>No secrets in code — everything via environment / dependency injection.</li>
+        <li>Input sanitisation with Pydantic <code>field_validator</code>; a prompt-injection note in the threat model.</li>
+        <li><b>Never log raw PII</b> — structured logs capture metadata, not row contents.</li>
+      </ul>
+      <div class="note amber"><span class="tag v2">v2</span> Bearer-token auth via FastAPI <code>Depends</code> with <code>secrets.compare_digest</code>, plus per-client rate limiting — deferred so v1 stays shippable.</div>
+    `
+  },
+  {
+    icon:"📐", title:"Spec-Driven Development",
+    desc:"How OpenSpec drives every feature, not just the docs.",
+    body:`
+      <p>We don't start by writing code — we start by writing the <b>spec</b>, reviewing it, and only then letting the agent build. This is the AIC-2101 OpenSpec discipline, applied as a real workflow the whole team follows.</p>
+
+      <h4><span class="b"></span>The full cycle, every feature</h4>
+      <div class="mermaid-box"><div class="mermaid">
+flowchart LR
+    P["PROPOSE<br/>/opsx-propose"]:::a --> R[Review &amp; refine]:::b
+    R --> AP["APPLY<br/>/opsx-apply"]:::a
+    AP --> AR["ARCHIVE<br/>/opsx-archive"]:::a
+    AR -.->|next feature| P
+    classDef a fill:#11203a,stroke:#a78bfa,color:#e8edf6;
+    classDef b fill:#172133,stroke:#6ee7ff,color:#e8edf6;
+      </div></div>
+
+      <ul>
+        <li><b>Propose</b> — draft <code>proposal.md</code> / <code>tasks.md</code> / <code>design.md</code> before any implementation.</li>
+        <li><b>Review &amp; refine</b> — a human (and a peer) tightens the spec; the agent isn't trusted to design unsupervised.</li>
+        <li><b>Apply</b> — implement strictly against the agreed spec, one feature at a time.</li>
+        <li><b>Archive</b> — close the change out and reset, so the next feature starts clean.</li>
+      </ul>
+
+      <div class="note purple"><b>Context hygiene</b> is the secret sauce: we deliberately clear the agent's context between phases so a polluted, sprawling conversation doesn't degrade output. Day 1 we propose the v1 spec; Day 2 we apply per feature; Day 3 we archive at freeze; v2 opens a fresh proposal.</div>
+    `
+  },
+  {
+    icon:"🧪", title:"How We Prove It Works",
+    desc:"Testing, evaluation, observability — the evidence.",
+    body:`
+      <h4><span class="b"></span>Testing without spending money or being flaky</h4>
+      <ul>
+        <li><b><code>TestModel</code> / <code>FunctionModel</code></b> stand in for the real LLM so tests are fast, free, and deterministic.</li>
+        <li><b><code>Agent.override(model=...)</code></b> swaps the model inside tests without touching production wiring.</li>
+        <li><b><code>TestModel(call_tools='all')</code></b> forces every tool to run, then we assert on the <code>ToolCallPart</code> in <code>result.all_messages()</code>.</li>
+        <li>Unit tests on stats, SQL-safety and validators; integration tests run the full pipeline with fakes for the vector store and DB.</li>
+      </ul>
+
+      <h4><span class="b"></span>Evaluation — honest numbers, not vibes</h4>
+      <ul>
+        <li><b><code>pydantic-evals</code></b> harness over a <b>versioned <code>golden.yaml</code></b> (20 question/answer cases) that's reviewed in PRs.</li>
+        <li>We report <b>execution accuracy</b> (1% tolerance), <b>first-attempt success rate</b>, <b>cost per question</b>, and <b>p50/p95 latency</b>.</li>
+      </ul>
+      <div class="note">We deliberately do <b>not</b> promise a magic "≥80% accuracy." We measure the real number and report it — including where it fails. That honesty is part of the grade and part of being trustworthy engineers.</div>
+
+      <h4><span class="b"></span>Observability</h4>
+      <ul>
+        <li>Structured JSON logging (metadata only, never raw PII) + a JSONL query log with usage/cost tracking.</li>
+        <li><span class="tag v2">v2</span> OpenTelemetry spans across the agent pipeline.</li>
+      </ul>
+    `
+  },
+  {
+    icon:"🗓️", title:"The 3-Day Build",
+    desc:"Day-by-day SDLC, scoped so v1 actually ships.",
+    body:`
+      <p>Five people, one week. The plan is built around a hard rule: <b>v1 freezes at the end of Day 3</b>. Everything risky is deferred to v2 so we always have something to demo.</p>
+
+      <div class="timeline">
+        <div class="tl"><div class="day">Day 1 — Foundation <span>scaffold &amp; contracts</span></div>
+          <ul><li>uv project, DuckDB load with context-managed connections, deterministic stats.</li>
+          <li><b>Publish 3 mock contracts</b> (VectorStore, DB, FakeLLM) so all 5 people work in parallel.</li>
+          <li>OpenSpec <b>PROPOSE</b> the v1 spec; structured-logging baseline.</li></ul>
+        </div>
+        <div class="tl"><div class="day">Day 2 — Build <span>the three agents</span></div>
+          <ul><li>Profiler: NL descriptions + embeddings → LanceDB.</li>
+          <li>Query: retrieval + SQL + EXPLAIN + built-in retries + clarifying-question union.</li>
+          <li>Explanation: token streaming. Validators wired. OpenSpec <b>APPLY</b> per feature.</li></ul>
+        </div>
+        <div class="tl"><div class="day">Day 3 — Integrate, test, freeze <span>ship v1</span></div>
+          <ul><li>Wire validators end-to-end, run <code>pydantic-evals</code>, unit + integration tests.</li>
+          <li>RAPID docs, OpenSpec <b>ARCHIVE</b>, then <b>tag &amp; freeze v1</b>.</li></ul>
+        </div>
+      </div>
+
+      <h4><span class="b"></span>Phases 6–7</h4>
+      <ul>
+        <li><b>Demo</b> — 5–7 slides, a live profile-then-ask demo on a rehearsed dataset, with a backup recording.</li>
+        <li><b>v2 iteration</b> — fresh OpenSpec proposal, then pull one stretch item at a time.</li>
+      </ul>
+
+      <div class="note purple"><b>The parallelism trick:</b> by publishing typed mock contracts on Day 1, nobody is blocked waiting for someone else's component — the profiler dev codes against a fake DB, the API dev against a fake agent, and it all snaps together on Day 3.</div>
+    `
+  },
+  {
+    icon:"👥", title:"The Team — Zero Shot",
+    desc:"Five roles, clean seams, no idle hands.",
+    body:`
+      <p>Five roles, each owning a vertical slice with a published contract at its boundary.</p>
+      <div class="grid2">
+        <div class="tile"><div class="t">Architect / RAPID</div><div class="d">Owns the spec, OpenSpec cycle, schemas (<code>models.py</code>), mock contracts, and RAPID/go-no-go docs.</div></div>
+        <div class="tile"><div class="t">Profiler</div><div class="d">Deterministic stats, NL descriptions, embeddings, LanceDB semantic layer.</div></div>
+        <div class="tile"><div class="t">Query / Orchestration</div><div class="d">Retrieval, SQL generation, EXPLAIN, self-correction, clarifying questions.</div></div>
+        <div class="tile"><div class="t">API / Streaming</div><div class="d">FastAPI <code>/ask</code> SSE, <code>/profile</code>, <code>/profiles</code>, <code>/health</code>, CLI.</div></div>
+        <div class="tile"><div class="t">Test / Eval</div><div class="d">TestModel/override harness, <code>pydantic-evals</code>, golden set, metrics reporting.</div></div>
+      </div>
+      <div class="note">Roles are slices, not silos — the mock contracts mean any two people can integrate their halves the moment both pass their own tests.</div>
+    `
+  },
+  {
+    icon:"🚀", title:"Where It Goes Next (v2)",
+    desc:"The stretch roadmap, sequenced by risk.",
+    body:`
+      <p>v1 is the trustworthy core. v2 pulls in the things that are higher-risk or stateful — one at a time, each behind a fresh OpenSpec proposal.</p>
+      <ul>
+        <li><b>Multi-table joins</b> <span class="tag v2">v2</span> — auto join-detection across the profiled schema (the hardest text-to-SQL problem, so it waits).</li>
+        <li><b>Conversational follow-ups</b> <span class="tag v2">v2</span> — sliding-window <code>message_history</code> so you can ask "now show that by month" and it remembers.</li>
+        <li><b>Cosine-similarity validator</b> <span class="tag v2">v2</span> — added only once we have data to justify the threshold (no magic numbers in v1).</li>
+        <li><b>Streamlit UI</b> <span class="tag v2">v2</span> — a friendly front end over the existing API.</li>
+        <li><b>API auth + rate limiting</b> <span class="tag v2">v2</span>, <b>OpenTelemetry</b> <span class="tag v2">v2</span>.</li>
+        <li><b>"Never-seen dataset" demo</b> <span class="tag v2">v2</span> — point it at a fresh table live and let it profile + answer cold.</li>
+      </ul>
+
+      <h4><span class="b"></span>How it maps to the course</h4>
+      <ul>
+        <li><b>GAI-2109</b> — structured outputs, tools, dependency injection, <code>ModelRetry</code>, memory, HITL, testing, evaluation, FastAPI streaming, observability &amp; security.</li>
+        <li><b>AIC-2101</b> — the full OpenSpec spec-driven cycle as our working method.</li>
+      </ul>
+      <div class="note">Every capability in this project traces back to a specific lesson or lab — it's a working portfolio of the entire curriculum, not a toy.</div>
+    `
+  }
+];
+
+/* ---------- Render chapter cards ---------- */
+const grid = document.getElementById("chapters");
+CH.forEach((c,i)=>{
+  const el = document.createElement("div");
+  el.className = "chapter";
+  el.innerHTML = `
+    <div class="ch-num">CHAPTER ${String(i+1).padStart(2,"0")}</div>
+    <div class="ch-icon">${c.icon}</div>
+    <div class="ch-title">${c.title}</div>
+    <div class="ch-desc">${c.desc}</div>
+    <span class="ch-open">Read this chapter →</span>`;
+  el.addEventListener("click",()=>openCh(i));
+  grid.appendChild(el);
+});
+
+/* ---------- Reader logic ---------- */
+const reader=document.getElementById("reader");
+const rPk=document.getElementById("rPk"), rTitle=document.getElementById("rTitle"), rBody=document.getElementById("rBody");
+const rPrev=document.getElementById("rPrev"), rNext=document.getElementById("rNext");
+const rPrevNm=document.getElementById("rPrevNm"), rNextNm=document.getElementById("rNextNm");
+let cur=0;
+
+function openCh(i){
+  cur=i;
+  const c=CH[i];
+  rPk.textContent=`Chapter ${String(i+1).padStart(2,"0")} of ${String(CH.length).padStart(2,"0")}`;
+  rTitle.textContent=`${c.icon}  ${c.title}`;
+  rBody.innerHTML=c.body;
+  rPrev.disabled = i===0;
+  rNext.disabled = i===CH.length-1;
+  rPrevNm.textContent = i>0 ? CH[i-1].title : "";
+  rNextNm.textContent = i<CH.length-1 ? CH[i+1].title : "";
+  reader.classList.add("open");
+  document.body.style.overflow="hidden";
+  reader.scrollTop=0;
+  // render any mermaid diagrams freshly injected
+  reader.querySelectorAll(".mermaid").forEach(m=>{m.removeAttribute("data-processed");});
+  try{ mermaid.run({nodes:reader.querySelectorAll(".mermaid")}); }catch(e){}
+}
+function closeCh(){ reader.classList.remove("open"); document.body.style.overflow=""; }
+
+document.getElementById("rClose").addEventListener("click",closeCh);
+rPrev.addEventListener("click",()=>{ if(cur>0) openCh(cur-1); });
+rNext.addEventListener("click",()=>{ if(cur<CH.length-1) openCh(cur+1); });
+reader.addEventListener("click",e=>{ if(e.target===reader) closeCh(); });
+document.addEventListener("keydown",e=>{
+  if(!reader.classList.contains("open")) return;
+  if(e.key==="Escape") closeCh();
+  if(e.key==="ArrowRight" && cur<CH.length-1) openCh(cur+1);
+  if(e.key==="ArrowLeft" && cur>0) openCh(cur-1);
+});
+</script>
+</body>
+</html>
